@@ -8,9 +8,12 @@ import apiRoutes from "./routes";
 
 const app = express();
 const server = http.createServer(app);
+
+const corsOrigin = process.env.CORS_ORIGIN || "*";
+
 const io = new SocketIOServer(server, {
   cors: {
-    origin: "*",
+    origin: corsOrigin,
     methods: ["GET", "POST", "PUT", "DELETE"]
   }
 });
@@ -19,7 +22,10 @@ const PORT = process.env.PORT || 5000;
 
 // Security & Utility Middlewares
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+  origin: corsOrigin === "*" ? true : [corsOrigin, "http://localhost:3000"],
+  credentials: true
+}));
 app.use(express.json());
 
 const limiter = rateLimit({
@@ -32,9 +38,14 @@ app.use("/api/", limiter);
 // API v1 Router
 app.use("/api/v1", apiRoutes);
 
-// Health check endpoint
+// Health check endpoint for Render monitoring
 app.get("/health", (req, res) => {
-  res.json({ status: "OK", service: "Mindwave Express API", timestamp: new Date().toISOString() });
+  res.json({ 
+    status: "OK", 
+    service: "Mindwave Express API", 
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV || "development"
+  });
 });
 
 // Socket.IO Real-Time Collaboration Setup

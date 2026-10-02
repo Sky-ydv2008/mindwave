@@ -6,6 +6,14 @@ Mindweave is an enterprise-grade AI collaborative workspace combining project ma
 
 ---
 
+## 🚀 Deployment Status & Links
+
+- **Frontend (Vercel)**: Configured for 1-click deployment on [Vercel](https://vercel.com) using `vercel.json` (`apps/web`).
+- **Backend (Render)**: Configured for automated deployment on [Render](https://render.com) using `render.yaml` (`apps/server`).
+- **Full Guide**: See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for step-by-step instructions.
+
+---
+
 ## 🌟 Key Features
 
 1. **Systematic Symbolic Representation & Knowledge Layer**:
@@ -45,8 +53,8 @@ Mindweave is an enterprise-grade AI collaborative workspace combining project ma
 ```
 mindwave/
 ├── apps/
-│   ├── web/               # React + Vite + TypeScript + Tailwind CSS UI
-│   └── server/            # Express + TypeScript + Socket.IO + Prisma API
+│   ├── web/               # React + Vite + TypeScript + Tailwind CSS UI (Deploy on Vercel)
+│   └── server/            # Express + TypeScript + Socket.IO + Prisma API (Deploy on Render)
 ├── packages/
 │   ├── types/             # Shared TypeScript types & enums
 │   └── config/            # Shared configuration definitions
@@ -55,20 +63,17 @@ mindwave/
 ├── docs/
 │   ├── ARCHITECTURE.md    # System & Symbolic Architecture Details
 │   ├── API.md             # REST API & WebSocket Event Specification
-│   └── SETUP.md           # Setup & Deployment Instructions
+│   ├── SETUP.md           # Setup Instructions
+│   └── DEPLOYMENT.md      # Vercel & Render Deployment Guide
+├── vercel.json            # Vercel Frontend Deployment Config
+├── render.yaml            # Render Backend Blueprint Config
 ├── docker-compose.yml     # Docker environment (PostgreSQL, Redis, Web, Server)
 └── README.md
 ```
 
 ---
 
-## 🚀 Getting Started
-
-### Prerequisites
-- **Node.js**: v18+ or v20+
-- **npm** or **pnpm**
-
-### Installation & Local Run
+## 🛠️ Local Installation & Run
 
 1. **Clone Repository**:
    ```bash
@@ -86,25 +91,14 @@ mindwave/
    npm run build
    ```
 
-4. **Run Server & Web Applications**:
+4. **Run Applications**:
    ```bash
-   # Run both server & web simultaneously:
    npm run dev
    ```
 
 5. **Access Application**:
    - **Frontend UI**: `http://localhost:3000`
    - **Backend API**: `http://localhost:5000/api/v1`
-
----
-
-## 🐳 Docker Deployment
-
-Run the complete multi-container setup with PostgreSQL, Redis, Express API, and Nginx Web Server:
-
-```bash
-docker-compose up --build
-```
 
 ---
 

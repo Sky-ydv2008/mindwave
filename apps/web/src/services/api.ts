@@ -1,9 +1,11 @@
-const API_BASE = '/api/v1';
+const API_BASE = (import.meta.env.VITE_API_URL as string) || '/api/v1';
 
 export class ApiService {
   private static async request(endpoint: string, options: RequestInit = {}) {
     try {
-      const res = await fetch(`${API_BASE}${endpoint}`, {
+      const baseUrl = API_BASE.endsWith('/') ? API_BASE.slice(0, -1) : API_BASE;
+      const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${endpoint}`;
+      const res = await fetch(url, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
