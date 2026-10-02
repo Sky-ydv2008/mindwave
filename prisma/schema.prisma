@@ -1,0 +1,445 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  TEAM_ADMIN
+  PROJECT_MANAGER
+  TEAM_MEMBER
+}
+
+enum TaskStatus {
+  BACKLOG
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  BLOCKED
+  COMPLETED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum KnowledgeEntityType {
+  PROJECT
+  PERSON
+  TASK
+  FEATURE
+  REQUIREMENT
+  DOCUMENT
+  TECHNOLOGY
+  REPOSITORY
+  ISSUE
+  PULL_REQUEST
+  MILESTONE
+  DECISION
+}
+
+enum KnowledgeRelationType {
+  ASSIGNED_TO
+  DEPENDS_ON
+  BLOCKS
+  PART_OF
+  IMPLEMENTS
+  DOCUMENTED_IN
+  DISCUSSED_IN
+  FIXES
+  REQUIRES
+  RELATED_TO
+  CREATED_BY
+  APPROVED_BY
+}
+
+model User {
+  id            String          @id @default(uuid())
+  email         String          @unique
+  password      String
+  name          String
+  avatarUrl     String?
+  role          UserRole        @default(TEAM_MEMBER)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  teamMembers   TeamMember[]
+  projectMembers ProjectMember[]
+  tasksAssigned Task[]          @relation("TaskAssignee")
+  tasksCreated  Task[]          @relation("TaskCreator")
+  comments      Comment[]
+  messages      Message[]
+  notifications Notification[]
+  refreshTokens RefreshToken[]
+  activityLogs  ActivityLog[]
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Team {
+  id          String       @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  members     TeamMember[]
+  projects    Project[]
+}
+
+model TeamMember {
+  id        String   @id @default(uuid())
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      UserRole @default(TEAM_MEMBER)
+  createdAt DateTime @default(now())
+
+  @@unique([teamId, userId])
+}
+
+model Project {
+  id             String             @id @default(uuid())
+  key            String             @unique
+  name           String
+  description    String?
+  teamId         String
+  team           Team               @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  health         String             @default("HEALTHY")
+  progress       Float              @default(0)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  members        ProjectMember[]
+  tasks          Task[]
+  sprints        Sprint[]
+  milestones     Milestone[]
+  channels       Channel[]
+  documents      Document[]
+  githubRepos    GitHubRepository[]
+  entities       KnowledgeEntity[]
+  relations      KnowledgeRelation[]
+  facts          KnowledgeFact[]
+  evidences      KnowledgeEvidence[]
+  events         KnowledgeEvent[]
+  conversations  AIConversation[]
+  reasoningTraces ReasoningTrace[]
+}
+
+model ProjectMember {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      UserRole @default(TEAM_MEMBER)
+  createdAt DateTime @default(now())
+
+  @@unique([projectId, userId])
+}
+
+model Task {
+  id           String           @id @default(uuid())
+  projectId    String
+  project      Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title        String
+  description  String?
+  status       TaskStatus       @default(TODO)
+  priority     TaskPriority     @default(MEDIUM)
+  assigneeId   String?
+  assignee     User?            @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  creatorId    String
+  creator      User             @relation("TaskCreator", fields: [creatorId], references: [id])
+  sprintId     String?
+  sprint       Sprint?          @relation(fields: [sprintId], references: [id])
+  milestoneId  String?
+  milestone    Milestone?       @relation(fields: [milestoneId], references: [id])
+  deadline     DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  subtasks     Subtask[]
+  comments     Comment[]
+  labels       Label[]
+  dependencies TaskDependency[] @relation("TaskDependent")
+  dependents   TaskDependency[] @relation("TaskPrerequisite")
+}
+
+model TaskDependency {
+  id             String   @id @default(uuid())
+  taskId         String
+  task           Task     @relation("TaskDependent", fields: [taskId], references: [id], onDelete: Cascade)
+  dependsOnTaskId String
+  dependsOnTask  Task     @relation("TaskPrerequisite", fields: [dependsOnTaskId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+}
+
+model Subtask {
+  id        String   @id @default(uuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  title     String
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Label {
+  id     String @id @default(uuid())
+  name   String
+  color  String @default("#3b82f6")
+  tasks  Task[]
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+}
+
+model Sprint {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  goal      String?
+  startDate DateTime
+  endDate   DateTime
+  status    String   @default("PLANNED")
+  tasks     Task[]
+}
+
+model Milestone {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  dueDate     DateTime
+  completed   Boolean  @default(false)
+  tasks       Task[]
+}
+
+model Channel {
+  id        String    @id @default(uuid())
+  projectId String
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  isPrivate Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  messages  Message[]
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  channelId String
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  content   String
+  replyToId String?
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+}
+
+model Document {
+  id            String          @id @default(uuid())
+  projectId     String
+  project       Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title         String
+  fileType      String
+  fileUrl       String
+  fileSize      Int
+  extractedText String?
+  uploadedAt    DateTime        @default(now())
+  chunks        DocumentChunk[]
+}
+
+model DocumentChunk {
+  id         String   @id @default(uuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  chunkIndex Int
+  content    String
+  embedding  String?
+}
+
+model GitHubRepository {
+  id            String         @id @default(uuid())
+  projectId     String
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name          String
+  owner         String
+  url           String
+  defaultBranch String         @default("main")
+  connectedAt   DateTime       @default(now())
+  commits       GitHubCommit[]
+  pullRequests  PullRequest[]
+}
+
+model GitHubCommit {
+  id           String           @id @default(uuid())
+  repositoryId String
+  repository   GitHubRepository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  sha          String
+  message      String
+  author       String
+  committedAt  DateTime
+}
+
+model PullRequest {
+  id           String           @id @default(uuid())
+  repositoryId String
+  repository   GitHubRepository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  number       Int
+  title        String
+  status       String
+  author       String
+  url          String
+  createdAt    DateTime         @default(now())
+}
+
+model AIConversation {
+  id        String      @id @default(uuid())
+  projectId String
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title     String
+  createdAt DateTime    @default(now())
+  messages  AIMessage[]
+}
+
+model AIMessage {
+  id             String         @id @default(uuid())
+  conversationId String
+  conversation   AIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String
+  content        String
+  createdAt      DateTime       @default(now())
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action    String
+  details   String?
+  timestamp DateTime @default(now())
+}
+
+model KnowledgeEntity {
+  id               String               @id @default(uuid())
+  projectId        String
+  project          Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type             KnowledgeEntityType
+  name             String
+  externalId       String?
+  metadata         String?
+  createdAt        DateTime             @default(now())
+  sourceRelations  KnowledgeRelation[]  @relation("SourceEntity")
+  targetRelations  KnowledgeRelation[]  @relation("TargetEntity")
+  aliases          EntityAlias[]
+}
+
+model EntityAlias {
+  id       String          @id @default(uuid())
+  entityId String
+  entity   KnowledgeEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  alias    String
+}
+
+model KnowledgeRelation {
+  id             String                @id @default(uuid())
+  projectId      String
+  project        Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourceEntityId String
+  sourceEntity   KnowledgeEntity       @relation("SourceEntity", fields: [sourceEntityId], references: [id], onDelete: Cascade)
+  targetEntityId String
+  targetEntity   KnowledgeEntity       @relation("TargetEntity", fields: [targetEntityId], references: [id], onDelete: Cascade)
+  relationType   KnowledgeRelationType
+  confidence     Float                 @default(1.0)
+  isConfirmed    Boolean               @default(true)
+  evidenceId     String?
+  createdAt      DateTime              @default(now())
+}
+
+model KnowledgeFact {
+  id           String   @id @default(uuid())
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  subject      String
+  predicate    String
+  object       String
+  confidence   Float    @default(1.0)
+  source       String
+  isConfirmed  Boolean  @default(true)
+  evidenceText String?
+  timestamp    DateTime @default(now())
+}
+
+model KnowledgeRule {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  condition   String
+  action      String
+  isActive    Boolean  @default(true)
+  version     Int      @default(1)
+  createdAt   DateTime @default(now())
+}
+
+model KnowledgeEvidence {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourceType  String
+  sourceId    String
+  contentSnippet String
+  createdAt   DateTime @default(now())
+}
+
+model KnowledgeEvent {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  eventType String
+  payload   String
+  createdAt DateTime @default(now())
+}
+
+model ReasoningTrace {
+  id                   String   @id @default(uuid())
+  projectId            String
+  project              Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  query                String
+  intent               String
+  symbolicEntitiesFound String
+  vectorChunksUsed     String
+  rulesApplied         String
+  response             String
+  timestamp            DateTime @default(now())
+}

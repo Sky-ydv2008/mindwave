@@ -1,0 +1,33 @@
+{
+  "name": "mindwave",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mindweave — AI-Powered Collaborative Intelligence & Project Execution Platform",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/server & npm run dev --workspace=apps/web",
+    "build": "npm run build --workspace=apps/web && npm run build --workspace=apps/server",
+    "test": "npm run test --workspace=apps/server && npm run test --workspace=apps/web",
+    "lint": "npm run lint --workspace=apps/web && npm run lint --workspace=apps/server",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:seed": "prisma db seed"
+  },
+  "devDependencies": {
+    "prisma": "^5.10.0",
+    "typescript": "^5.3.3"
+  },
+  "keywords": [
+    "ai",
+    "symbolic-reasoning",
+    "project-management",
+    "kanban",
+    "traceability",
+    "collaboration"
+  ],
+  "author": "Apexx Innovators",
+  "license": "MIT"
+}
